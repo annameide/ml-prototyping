@@ -1,3 +1,5 @@
+assets/poseautomat
+
 .env-ml-prototyping
 output.json
 yolov5s.pt
