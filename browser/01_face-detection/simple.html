@@ -1,0 +1,109 @@
+<!-- Based on this: https://github.com/tensorflow/tfjs-models/tree/master/face-landmarks-detection -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <!-- Require the peer dependencies of face-landmarks-detection. -->
+    <script src="https://unpkg.com/@tensorflow/tfjs-core@2.4.0/dist/tf-core.js"></script>
+    <script src="https://unpkg.com/@tensorflow/tfjs-converter@2.4.0/dist/tf-converter.js"></script>
+
+    <!-- You must explicitly require a TF.js backend if you're not using the tfjs union bundle. -->
+    <script src="https://unpkg.com/@tensorflow/tfjs-backend-cpu@2.4.0/dist/tf-backend-cpu.js"></script>
+    <!-- <script src="https://unpkg.com/@tensorflow/tfjs-backend-webgl@2.4.0/dist/tf-backend-webgl.js"></script> -->
+    <!-- Alternatively you can use the WASM backend: <script src="https://unpkg.com/@tensorflow/tfjs-backend-wasm@2.4.0/dist/tf-backend-wasm.js"></script> -->
+
+    <!-- Require face-landmarks-detection itself. -->
+    <script src="https://unpkg.com/@tensorflow-models/face-landmarks-detection@0.0.1/dist/face-landmarks-detection.js"></script>
+    <script>
+      const image = '../../assets/face2.jpg';
+      async function main() {
+        // Load the MediaPipe Facemesh package.
+        const model = await faceLandmarksDetection.load(
+          faceLandmarksDetection.SupportedPackages.mediapipeFacemesh);
+
+        const imgEl = document.createElement("img");
+        imgEl.onload = async () => {
+          // Pass in a video stream (or an image, canvas, or 3D tensor) to obtain an
+          // array of detected faces from the MediaPipe graph. If passing in a video
+          // stream, a single prediction per frame will be returned.
+          const predictions = await model.estimateFaces({ 
+            input: imgEl
+          });
+          if (predictions.length > 0) {
+            /*
+            `predictions` is an array of objects describing each detected face, for example:
+
+            [
+              {
+                faceInViewConfidence: 1, // The probability of a face being present.
+                boundingBox: { // The bounding box surrounding the face.
+                  topLeft: [232.28, 145.26],
+                  bottomRight: [449.75, 308.36],
+                },
+                mesh: [ // The 3D coordinates of each facial landmark.
+                  [92.07, 119.49, -17.54],
+                  [91.97, 102.52, -30.54],
+                  ...
+                ],
+                scaledMesh: [ // The 3D coordinates of each facial landmark, normalized.
+                  [322.32, 297.58, -17.54],
+                  [322.18, 263.95, -30.54]
+                ],
+                annotations: { // Semantic groupings of the `scaledMesh` coordinates.
+                  silhouette: [
+                    [326.19, 124.72, -3.82],
+                    [351.06, 126.30, -3.00],
+                    ...
+                  ],
+                  ...
+                }
+              }
+            ]
+            */
+
+            // Using p5js to draw the face
+            const sketch = (p) => {
+              let img;
+              p.preload = () => {
+                img = p.loadImage(image);
+              };
+              p.setup = () => {
+                p.createCanvas(img.width, img.height);
+
+                p.image(img, 0, 0);
+
+                for (let i = 0; i < predictions.length; i++) {
+                  const keypoints = predictions[i].scaledMesh;
+                  const bounds = predictions[i].boundingBox;
+
+                  p.noFill();
+                  p.stroke('red');
+
+                  p.rect(
+                    bounds['topLeft'][0],
+                    bounds['topLeft'][1],
+                    bounds['bottomRight'][0] - bounds['topLeft'][0],
+                    bounds['bottomRight'][1] - bounds['topLeft'][1]);
+
+                  for (let i = 0; i < keypoints.length; i++) {
+                    const [x, y, z] = keypoints[i];
+                    p.point(x,y);
+                  }
+                }
+
+                p.noLoop();
+              };
+            };
+            new p5(sketch);
+          }
+        };
+        imgEl.src = image;
+      }
+
+      main();
+    </script>
+  </body>
+</html>

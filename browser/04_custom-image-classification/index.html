@@ -1,0 +1,77 @@
+<html>
+  <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <!-- Load the latest version of TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier"></script>
+  </head>
+  <body>
+    <script>
+      const images = [
+        // CLASS, IMAGE_PATH
+        [0,'../../assets/custom/PXL_20220103_194248368.jpg'],
+        [0,'../../assets/custom/PXL_20220103_194251951.jpg'],
+        [0,'../../assets/custom/PXL_20220103_194255917.jpg'],
+        [0,'../../assets/custom/PXL_20220103_194300041.jpg'],
+        [0,'../../assets/custom/PXL_20220103_194301888.jpg'],
+        [0,'../../assets/custom/PXL_20220103_194304294.jpg'],
+        [0,'../../assets/custom/PXL_20220103_194306995.jpg'],
+        [0,'../../assets/custom/PXL_20220103_194310030.jpg'],
+        [0,'../../assets/custom/PXL_20220103_194311139.jpg'],
+        [0,'../../assets/custom/PXL_20220103_194314366.jpg'],
+        [1,'../../assets/custom/PXL_20220103_205049532.jpg'],
+        [1,'../../assets/custom/PXL_20220103_205051828.jpg'],
+        [1,'../../assets/custom/PXL_20220103_205054562.jpg'],
+        [1,'../../assets/custom/PXL_20220103_205056855.jpg'],
+        [1,'../../assets/custom/PXL_20220103_205058662.jpg'],
+        [1,'../../assets/custom/PXL_20220103_205101331.jpg'],
+        [1,'../../assets/custom/PXL_20220103_205103780.jpg']
+      ];
+
+      const tests = [
+        '../../assets/custom/PXL_20220103_205106865.jpg',
+        '../../assets/custom/PXL_20220103_194317762.jpg'
+      ];
+
+      const classifier = knnClassifier.create();
+
+      let net;
+
+      async function app() {
+        console.log('Loading mobilenet..');
+
+        // Load the model.
+        net = await mobilenet.load();
+        console.log('Successfully loaded model');
+
+        for (let i = 0; i < images.length; i += 1) {
+          await new Promise((resolve, reject) => {
+            const imgEl = document.createElement("img");
+            imgEl.onload = async () => {
+              const activation = net.infer(tf.browser.fromPixels(imgEl), true);
+              classifier.addExample(activation, images[i][0]);
+              resolve();
+            };
+            imgEl.src = images[i][1];
+          });
+        }
+
+        for (let i = 0; i < tests.length; i += 1) {
+          await new Promise((resolve, reject) => {
+            const imgEl = document.createElement("img");
+            imgEl.onload = async () => {
+              const activation = net.infer(tf.browser.fromPixels(imgEl), 'conv_preds');
+              const result = await classifier.predictClass(activation);
+              console.log(result);
+              resolve();
+            };
+            imgEl.src = tests[i];
+          });
+        }
+
+      }
+      app();
+    </script>
+  </body>
+</html>

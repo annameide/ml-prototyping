@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+    <script>
+      const images = ['../../assets/face1.png', '../../assets/face2.jpg', '../../assets/face3.jpg'];
+
+      for (let i = 0; i < images.length; i += 1) {
+        const facemesh = ml5.facemesh(() => {
+          const sketch = (p) => {
+            let img;
+            let faces;
+            p.preload = () => {
+              img = p.loadImage(images[i]);
+            };
+            p.setup = () => {
+              p.createCanvas(img.width, img.height);
+              p.image(img, 0, 0);
+
+              facemesh.predict(img, (result) => {
+                faces = result;
+              });
+
+              p.noFill();
+              p.stroke('red');
+              p.strokeWeight(3);
+            };
+            p.draw = () => {
+              if (faces) {
+                for (let i = 0; i < faces.length; i += 1) {
+                  const keypoints = faces[i].scaledMesh;
+                  const bounds = faces[i].boundingBox;
+
+                  // Draw facial keypoints.
+                  for (let j = 0; j < keypoints.length; j += 1) {
+                    const [x, y, z] = keypoints[j];
+                    p.point(x, y);
+                  }
+
+                  console.log(bounds);
+
+                  p.rect(
+                    bounds.topLeft[0][0],
+                    bounds.topLeft[0][1],
+                    bounds.bottomRight[0][0] - bounds.topLeft[0][0],
+                    bounds.bottomRight[0][1] - bounds.topLeft[0][1]
+                  );
+                }
+                p.noLoop();
+              }
+            }
+          };
+          new p5(sketch);
+        });
+      }
+    </script>
+  </body>
+</html>

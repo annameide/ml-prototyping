@@ -1,0 +1,185 @@
+<!-- Based on this: https://github.com/tensorflow/tfjs-models/tree/master/face-landmarks-detection -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <script src="./landmarks.js"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+    <script>
+      const images = ['../../assets/face2.jpg', '../../assets/face3.jpg'];
+
+      // A choice for number of keypoints: 7,33,68,468
+      // === bare minimum 7 points ===
+      // var VTX = VTX7;
+
+      // === important facial feature 33 points ===
+      // var VTX = VTX33;
+
+      // === standard facial landmark 68 points ===
+      // var VTX = VTX68;
+
+      // === full facemesh 468 points ===
+      var VTX = VTX468;
+
+      // select the right triangulation based on vertices
+      var TRI;
+      if (VTX == VTX7){
+        TRI = TRI7;
+      }else if (VTX == VTX33){
+        TRI = TRI33;
+      }else if (VTX == VTX68){
+        TRI = TRI68;
+      }else{
+        TRI = TRI468;
+      }
+
+      const img = [];
+      function preload () {
+        img[0] = loadImage(images[0]);
+        img[1] = loadImage(images[1]);
+      }
+
+      const faces = [];
+      const faceImages = [];
+      async function setup () {
+        createCanvas(400, 400, WEBGL);
+        for (let i = 0; i < images.length; i += 1) {
+          await new Promise((resolve) => {
+            let facemesh = ml5.facemesh(async () => {
+              facemesh.predict(img[i], (result) => {
+                faces.push(result[0]); // only using the first image
+                const bounds = result[0].boundingBox;
+                faceImages.push(img[i].get(
+                  bounds.topLeft[0][0],
+                  bounds.topLeft[0][1],
+                  bounds.bottomRight[0][0] - bounds.topLeft[0][0],
+                  bounds.bottomRight[0][1] - bounds.topLeft[0][1]
+                ));
+                resolve();
+              });
+            });
+          });
+        }
+      }
+
+      const transitionLength = 20;
+      let transition = 0;
+      function draw() {
+        push();
+        translate(-200, -200);
+        if (faces.length === images.length) {
+          const transitionLerp = transition / transitionLength;
+          for (let i = 0; i < images.length; i += 1) {
+            if (i === 1) {
+              tint(255, 255 / transitionLength * transition);
+            }
+            
+            let scale1 = 1;
+            if (faceImages[0].width < faceImages[0].height) {
+              scale1 = 400 / faceImages[0].height;
+            } else {
+              scale1 = 400 / faceImages[0].width;
+            }
+            let scale2 = 1;
+            if (faceImages[1].width < faceImages[1].height) {
+              scale2 = 400 / faceImages[1].height;
+            } else {
+              scale2 = 400 / faceImages[1].width;
+            }
+
+            push();
+            translate(
+              (400 - lerp(faceImages[0].width * scale1, faceImages[1].width * scale2, transitionLerp)) / 2,
+              (400 - lerp(faceImages[0].height * scale1, faceImages[1].height * scale2, transitionLerp)) / 2
+            );
+
+            for (let j = 0; j < TRI.length; j+=3){
+              beginShape();
+              texture(faceImages[i]);
+
+              const a = faces[i].scaledMesh[TRI[j  ]];
+              const b = faces[i].scaledMesh[TRI[j+1]];
+              const c = faces[i].scaledMesh[TRI[j+2]];
+
+              const a1 = faces[0].scaledMesh[TRI[j  ]];
+              const b1 = faces[0].scaledMesh[TRI[j+1]];
+              const c1 = faces[0].scaledMesh[TRI[j+2]];
+
+              const a2 = faces[1].scaledMesh[TRI[j  ]];
+              const b2 = faces[1].scaledMesh[TRI[j+1]];
+              const c2 = faces[1].scaledMesh[TRI[j+2]];
+
+              const topLeftX = faces[i].boundingBox.topLeft[0][0];
+              const topLeftY = faces[i].boundingBox.topLeft[0][1];
+
+              const topLeftX1 = faces[0].boundingBox.topLeft[0][0];
+              const topLeftY1 = faces[0].boundingBox.topLeft[0][1];
+
+              const topLeftX2 = faces[1].boundingBox.topLeft[0][0];
+              const topLeftY2 = faces[1].boundingBox.topLeft[0][1];
+
+              let v1;
+              let v2;
+              let lV;
+              v1 = createVector((a1[0] - topLeftX1) * scale1, (a1[1] - topLeftY1) * scale1, 0);
+              v2 = createVector((a2[0] - topLeftX2) * scale2, (a2[1] - topLeftY2) * scale2, 0);
+              lV = p5.Vector.lerp(v1, v2, transitionLerp);
+              vertex(
+                lV.x, lV.y,
+                a[0] - topLeftX, a[1] - topLeftY
+              );
+
+              v1 = createVector((b1[0] - topLeftX1) * scale1, (b1[1] - topLeftY1) * scale1, 0);
+              v2 = createVector((b2[0] - topLeftX2) * scale2, (b2[1] - topLeftY2) * scale2, 0);
+              lV = p5.Vector.lerp(v1, v2, transitionLerp);
+              vertex(
+                lV.x, lV.y,
+                b[0] - topLeftX, b[1] - topLeftY
+              );
+
+              v1 = createVector((c1[0] - topLeftX1) * scale1, (c1[1] - topLeftY1) * scale1, 0);
+              v2 = createVector((c2[0] - topLeftX2) * scale2, (c2[1] - topLeftY2) * scale2, 0);
+              lV = p5.Vector.lerp(v1, v2, transitionLerp);
+              vertex(
+                lV.x, lV.y,
+                c[0] - topLeftX, c[1] - topLeftY
+              );
+
+              endShape(CLOSE);
+            }
+
+            pop();
+            /*vertex(
+              (400 - faceImages[i].width * scale) / 2,
+              (400 - faceImages[i].height * scale) / 2,
+              0, 0
+            );
+            vertex(
+              400 - (400 - faceImages[i].width * scale) / 2,
+              (400 - faceImages[i].height * scale) / 2,
+              faceImages[i].width, 0
+            );
+            vertex(
+              400 - (400 - faceImages[i].width * scale) / 2,
+              400 - (400 - faceImages[i].height * scale) / 2,
+              faceImages[i].width, faceImages[i].height
+            );
+            vertex(
+              (400 - faceImages[i].width * scale) / 2,
+              400 - (400 - faceImages[i].height * scale) / 2,
+              0, faceImages[i].height
+            );*/
+          }
+          transition += 1;
+          if (transition >= transitionLength) {
+            noLoop();
+          }
+        }
+        pop();
+      }
+    </script>
+  </body>
+</html>

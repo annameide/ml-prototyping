@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+    <script>
+      let sentiment;
+      let paragraph;
+      let input;
+      let button;
+
+      function setup() {
+        noCanvas();
+        paragraph = createP('Loading Model...');
+
+        input = createInput('Add a sentence here.');
+        input.attribute('size', 75);
+
+        button = createButton('submit');
+        button.mousePressed(getSentiment);
+
+        sentiment = ml5.sentiment('movieReviews', modelReady);
+      }
+
+      function modelReady() {
+        paragraph.html('Model ready.');
+      }
+
+      function getSentiment() {
+        const text = input.value();
+        const prediction = sentiment.predict(text);
+
+        paragraph.html('Sentiment score: ' + prediction.score);
+      }
+    </script>
+  </body>
+</html>
