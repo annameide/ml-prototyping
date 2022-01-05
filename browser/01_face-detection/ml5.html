@@ -122,56 +122,42 @@
 '../../assets/poseautomat/pose_top_17.jpg',
 '../../assets/poseautomat/pose_top_18.jpg',
 ];
+  
+  const data = [];
 
-
-      for (let i = 0; i < images.length; i += 1) {
-        const facemesh = ml5.poseNet(() => {
+  async function app() {
+    for (let i = 0; i < images.length; i += 1) {
+      await new Promise((resolve, reject) => {
+        const poseNet = ml5.poseNet(() => {
           const sketch = (p) => {
+            const imgName = images[i];
             let img;
-            let faces;
             p.preload = () => {
               img = p.loadImage(images[i]);
             };
             p.setup = () => {
-              p.createCanvas(img.width, img.height);
-              p.image(img, 0, 0);
-
-              facemesh.singlePose(img, (result) => {
-                faces = result;
+              poseNet.singlePose(img, (result) => {
+                data.push({
+                  image: imgName,
+                  width: img.width,
+                  height: img.height,
+                  pose: result
+                });
+                resolve();
               });
-
-              p.noFill();
-              p.stroke('red');
-              p.strokeWeight(3);
             };
-            p.draw = () => {
-              if (faces) {
-                for (let i = 0; i < faces.length; i += 1) {
-                  const keypoints = faces[i].scaledMesh;
-                  const bounds = faces[i].boundingBox;
-
-                  // Draw facial keypoints.
-                  for (let j = 0; j < keypoints.length; j += 1) {
-                    const [x, y, z] = keypoints[j];
-                    p.point(x, y);
-                  }
-
-                  console.log(bounds);
-
-                  p.rect(
-                    bounds.topLeft[0][0],
-                    bounds.topLeft[0][1],
-                    bounds.bottomRight[0][0] - bounds.topLeft[0][0],
-                    bounds.bottomRight[0][1] - bounds.topLeft[0][1]
-                  );
-                }
-                p.noLoop();
-              }
-            }
           };
           new p5(sketch);
         });
-      }
+      });
+    }
+    const a = document.createElement("a");
+    const file = new Blob([JSON.stringify(data)], {type: 'application/json'});
+    a.href = URL.createObjectURL(file);
+    a.download = 'data.json';
+    a.click();
+  }
+  app();
     </script>
   </body>
 </html>
