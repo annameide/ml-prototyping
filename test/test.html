@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+    <!-- Require the peer dependencies of face-landmarks-detection. -->
+    <script src="https://unpkg.com/@tensorflow/tfjs-core@2.4.0/dist/tf-core.js"></script>
+    <script src="https://unpkg.com/@tensorflow/tfjs-converter@2.4.0/dist/tf-converter.js"></script>
+
+    <!-- You must explicitly require a TF.js backend if you're not using the tfjs union bundle. -->
+    <!--<script src="https://unpkg.com/@tensorflow/tfjs-backend-cpu@2.4.0/dist/tf-backend-cpu.js"></script>-->
+    <script src="https://unpkg.com/@tensorflow/tfjs-backend-webgl@2.4.0/dist/tf-backend-webgl.js"></script>
+    <!-- Alternatively you can use the WASM backend: <script src="https://unpkg.com/@tensorflow/tfjs-backend-wasm@2.4.0/dist/tf-backend-wasm.js"></script> -->
+
+    <!-- Require face-landmarks-detection itself. -->
+    <script src="https://unpkg.com/@tensorflow-models/pose-detection@0.0.1/dist/pose-detection.js"></script>
+    <script>
+    let video;
+let poseNet;
+let poses = [];
+
+async function setup() {
+  createCanvas(640, 480);
+  video = createCapture(VIDEO);
+  video.size(width, height);
+
+  // Create a new poseNet method with a single detection
+  poseNet = ml5.poseNet(video, modelReady);
+  // This sets up an event that fills the global variable "poses"
+  // with an array every time new poses are detected
+  poseNet.on("pose", function(results) {
+    poses = results;
+  });
+  // Hide the video element, and just show the canvas
+  video.hide();
+    const image = createCapture(VIDEO);
+        
+}
+
+function modelReady() {
+  select("#status").html("Model Loaded");
+}
+
+async function draw() {
+  image(video, 0, 0, width, height);
+
+  // We can call both functions to draw all keypoints and the skeletons
+  drawKeypoints();
+  drawSkeleton();
+  const detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, {
+          runtime: 'tfjs',
+          modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER //LIGHTNING
+        });
+
+        const imgEl = document.createElement("img");
+        imgEl.onload = async () => {
+          const predictions = await detector.estimatePoses(
+            tf.browser.fromPixels(imgEl),
+            {maxPoses: 1, flipHorizontal: false}
+          );
+
+          console.log(predictions);
+
+          const sketch = (p) => {
+            let img;
+            p.preload = () => {
+              img = p.loadImage(image);
+            };
+            p.setup = () => {
+              p.createCanvas(img.width, img.height);
+
+              p.image(img, 0, 0);
+
+              const keypoints = predictions[0].keypoints;
+
+              p.noFill();
+              p.stroke('red');
+              p.strokeWeight(3);
+
+              const pointMap = {};
+
+              for (let i = 0; i < keypoints.length; i++) {
+                p.point(
+                  keypoints[i].x,
+                  keypoints[i].y
+                );
+                pointMap[keypoints[i].name] = i;
+              }
+
+              [
+                ['left_ear', 'left_eye'],
+                ['left_eye', 'right_eye'],
+                ['right_eye', 'right_ear'],
+                ['left_wrist', 'left_elbow'],
+                ['left_elbow', 'left_shoulder'],
+                ['left_shoulder', 'right_shoulder'],
+                ['right_shoulder', 'right_elbow'],
+                ['right_elbow', 'right_wrist'],
+                ['left_ankle', 'left_knee'],
+                ['left_knee', 'left_hip'],
+                ['left_hip', 'right_hip'],
+                ['right_hip', 'right_knee'],
+                ['right_knee', 'right_ankle'],
+              ].forEach(els => {
+                p.line(
+                  keypoints[pointMap[els[0]]].x,
+                  keypoints[pointMap[els[0]]].y,
+                  keypoints[pointMap[els[1]]].x,
+                  keypoints[pointMap[els[1]]].y
+                );
+              });
+
+              p.noLoop();
+            };
+          };
+          new p5(sketch);    
+        };
+        imgEl.src = image;
+}
+
+// A function to draw ellipses over the detected keypoints
+function drawKeypoints() {
+  // Loop through all the poses detected
+  for (let i = 0; i < poses.length; i += 1) {
+    // For each pose detected, loop through all the keypoints
+    const pose = poses[i].pose;
+    for (let j = 0; j < pose.keypoints.length; j += 1) {
+      // A keypoint is an object describing a body part (like rightArm or leftShoulder)
+      const keypoint = pose.keypoints[j];
+      // Only draw an ellipse is the pose probability is bigger than 0.2
+      if (keypoint.score > 0.2) {
+        fill(255, 0, 0);
+        noStroke();
+        ellipse(keypoint.position.x, keypoint.position.y, 10, 10);
+      }
+    }
+  }
+}
+
+// A function to draw the skeletons
+function drawSkeleton() {
+  // Loop through all the skeletons detected
+  for (let i = 0; i < poses.length; i += 1) {
+    const skeleton = poses[i].skeleton;
+    // For every skeleton, loop through all body connections
+    for (let j = 0; j < skeleton.length; j += 1) {
+      const partA = skeleton[j][0];
+      const partB = skeleton[j][1];
+      stroke(255, 0, 0);
+      line(partA.position.x, partA.position.y, partB.position.x, partB.position.y);
+    }
+  }
+}
+
+</script>
+
+</body>
+</html>
