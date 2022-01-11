@@ -103,6 +103,7 @@ async function draw() {
   drawSkeleton();
 
   if (poses.length > 0) {
+    console.log('nothing found');
     const currentPose = [];
     // Not-normalized version
     // poses[0].pose.keypoints.forEach(k => {
@@ -135,7 +136,7 @@ async function draw() {
       let closestMatch = images[closestMatchIndex];
       console.log(closestMatch);
     } else {
-      // console.log('nothing found');
+      console.log('nothing found');
     }
   }
 }
