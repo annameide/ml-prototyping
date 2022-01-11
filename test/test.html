@@ -1,11 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+   <style>#img{position: fixed; top: 0; right: 0; }</style>
+   <!--width and hight in style tag
+  text wird analog eingebaut wie img mit # und dann position -->
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
 </head>
 <body>
+    <img id="img" src="" alt="">
     <script src="../assets/data.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
@@ -135,6 +140,7 @@ async function draw() {
       // WE HAVE A WINNER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       let closestMatch = images[closestMatchIndex];
       console.log(closestMatch);
+      document.querySelector("#img").setAttribute("src", closestMatch);
     } else {
       console.log('nothing found');
     }
