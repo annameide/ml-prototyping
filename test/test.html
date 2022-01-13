@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <style>#img{ position: fixed; top: 0; right: 0; width: 500px;}</style>
-   <!--<style>#metadata {position: fixed; top: 20; right: 20; width: 500px;}</style>-->
-   <!--width and hight in style tag
-  text wird analog eingebaut wie img mit # und dann position -->
+   <style>#img{position: fixed; top: 50; right: 0; width: 450px;}</style>
+   <style>#titel {text-align: right; font-family: Arial;}</style>
+   <style>#p_name {text-align: right; font-family: Arial;}</style>
+   <style>#p_surname {text-align: right; font-family: Arial;}</style>
+   <style>#p_livespan {text-align: right; font-family: Arial;}</style>
+   <style>#date {text-align: right; font-family: Arial;}</style>
+   <!--width and hight in style tag-->
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,7 +15,11 @@
 </head>
 <body>
     <h1>Poseautomat Prototyp</h1>
-    <p id="metadata">text</p>
+    <p id="titel">text</p>
+    <p id="p_name">text</p>
+    <p id="p_surname">text</p>
+    <p id="p_livespan">text</p>
+    <p id="date">text</p>
     <img id="img" src="" alt="">
     
     <script src="../assets/data.js"></script>
@@ -28,6 +35,7 @@ let video;
 let poseNet;
 let poses = [];
 let images = [];
+let paragraphs = [];
 let vptree ; // where we’ll store a reference to our vptree
 
 // How to calculate distance between vectors
@@ -145,6 +153,11 @@ async function draw() {
       let closestMatch = images[closestMatchIndex];
       console.log(closestMatch);
       document.querySelector("#img").setAttribute("src", closestMatch);
+      document.querySelector("#titel").innerHTML = data[closestMatchIndex].titel ;
+      document.querySelector("#p_name").innerHTML = data[closestMatchIndex].p_name ;
+      document.querySelector("#p_surname").innerHTML = data[closestMatchIndex].p_surname ;
+      document.querySelector("#p_livespan").innerHTML = data[closestMatchIndex].p_livespan ;
+      document.querySelector("#date").innerHTML = data[closestMatchIndex].date ;
     } else {
       console.log('nothing found');
     }
