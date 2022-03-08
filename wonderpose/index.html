@@ -1,209 +1,213 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+  <!-- styles and positions for: h1, img, img-metadata -->
   <style>#h1{position: fixed; top: 0; font-family: monospace; font-size: 4rem;}</style> 
   <style>#img{position: fixed; top: 50; right: 0; width: 450px;}</style>
-   <style>#titel {text-align: right; font-family: Arial;}</style>
-   <style>#p_name {text-align: right; font-family: Arial;}</style>
-   <style>#p_surname {text-align: right; font-family: Arial;}</style>
-   <style>#p_livespan {text-align: right; font-family: Arial;}</style>
-   <style>#date {text-align: right; font-family: Arial;}</style>
-   <!--width and hight in style tag-->
+  <style>#titel {text-align: right; font-family: Arial;}</style>
+  <style>#p_name {text-align: right; font-family: Arial;}</style>
+  <style>#p_surname {text-align: right; font-family: Arial;}</style>
+  <style>#p_livespan {text-align: right; font-family: Arial;}</style>
+  <style>#date {text-align: right; font-family: Arial;}</style>
+   
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <title>The Wonderpose</title>
 </head>
+
 <body>
-    <h1 id="h1">Prototype</h1>
-    <p id="titel">text</p>
-    <p id="p_name">text</p>
-    <p id="p_surname">text</p>
-    <p id="p_livespan">text</p>
-    <p id="date">text</p>
-    <img id="img" src="" alt="">
-    
-    <script src="assets/data.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
-    <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
-    <script src="browser/02_pose-detection/libs/similarity.js"></script>
-    <script src="browser/02_pose-detection/libs/vptree.min.js"></script>
-    <script>
+  <h1 id="h1">Prototype</h1>
+  <p id="titel">text</p>
+  <p id="p_name">text</p>
+  <p id="p_surname">text</p>
+  <p id="p_livespan">text</p>
+  <p id="date">text</p>
+  
+  <img id="img" src="" alt="">
 
-const similarity = require('compute-cosine-similarity');
+  <!-- including libraries -->  
+  <script src="assets/data.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+  <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+  <script src="browser/02_pose-detection/libs/similarity.js"></script>
+  <script src="browser/02_pose-detection/libs/vptree.min.js"></script>
+  
+  
+  <!-- here begins java script -->
+  <script>
+    const similarity = require('compute-cosine-similarity');
 
-let video;
-let poseNet;
-let poses = [];
-let images = [];
-let paragraphs = [];
-let vptree ; // where we’ll store a reference to our vptree
+    let video;
+    let poseNet;
+    let poses = [];
+    let images = [];
+    let paragraphs = [];
+    let vptree ; // where we’ll store a reference to our vptree
 
-// How to calculate distance between vectors
-function cosineDistanceMatching(poseVector1, poseVector2) {
-  let cosineSimilarity = similarity(poseVector1, poseVector2);
-  let distance = 2 * (1 - cosineSimilarity);
-  return Math.sqrt(distance);
-}
-
-async function setup() {
-  createCanvas(640, 480);
-  video = createCapture(VIDEO);
-  video.size(width, height);
-
-  // Create a new poseNet method with a single detection
-  poseNet = ml5.poseNet(video);
-  // This sets up an event that fills the global variable "poses"
-  // with an array every time new poses are detected
-  poseNet.on("pose", function(results) {
-    poses = results;
-  });
-  // Hide the video element, and just show the canvas
-  video.hide();
-
-  // an array with all the images’ pose data
-  const poseData = data
-  // remove images without poses
-  .filter(d => d.pose.length > 0)
-  // only keep the keypoints and remove rest
-  .map((d, i) => {
-    images[i] = d.image;
-    const keypoints = [];
-    // Not normalized version:
-    // d.pose[0].pose.keypoints.forEach(k => {
-    //   keypoints.push(k.position.x);
-    //   keypoints.push(k.position.y);
-    // });
-
-    // All images have different size so we need to normalize our pose space
-    let min_x = Number.MAX_VALUE;
-    let min_y = Number.MAX_VALUE;
-    let max_x = Number.MIN_VALUE;
-    let max_y = Number.MIN_VALUE;
-    d.pose[0].pose.keypoints.forEach(k => {
-      if (k.position.x > max_x) { max_x = k.position.x; }
-      if (k.position.y > max_y) { max_y = k.position.y; }
-      if (k.position.x < min_x) { min_x = k.position.x; }
-      if (k.position.y < min_y) { min_y = k.position.y; }
-    });
-
-    const poseWidth = max_x - min_x;
-    const poseHeight = max_y - min_y;
-
-    d.pose[0].pose.keypoints.forEach(k => {
-      keypoints.push((k.position.x - min_x) / poseWidth);
-      keypoints.push((k.position.y - min_y) / poseHeight);
-    });
-    return keypoints;
-  });
-
-  vptree = VPTreeFactory.build(poseData, cosineDistanceMatching);
-}
-
-// function to find most similar pose
-function findMostSimilarMatch(userPose) {
-  // search the vp tree for the image pose that is nearest (in cosine distance) to userPose
-  let nearestImage = vptree.search(userPose);
-  if (nearestImage.length === 0) {
-    return null;
-  }
-  // return index (in relation to poseData) of nearest match. 
-  return nearestImage[0].i; 
-}
-
-async function draw() {
-  if (video) {
-    image(video, 0, 0, width, height);
-  }
-
-  // We can call both functions to draw all keypoints and the skeletons
-  drawKeypoints();
-  drawSkeleton();
-
-  if (poses.length > 0) {
-    console.log('nothing found');
-    const currentPose = [];
-    // Not-normalized version
-    // poses[0].pose.keypoints.forEach(k => {
-    //   currentPose.push(k.position.x);
-    //   currentPose.push(k.position.y);
-    // });
-    // Normalized version (see above)
-    let min_x = Number.MAX_VALUE;
-    let min_y = Number.MAX_VALUE;
-    let max_x = Number.MIN_VALUE;
-    let max_y = Number.MIN_VALUE;
-    poses[0].pose.keypoints.forEach(k => {
-      if (k.position.x > max_x) { max_x = k.position.x; }
-      if (k.position.y > max_y) { max_y = k.position.y; }
-      if (k.position.x < min_x) { min_x = k.position.x; }
-      if (k.position.y < min_y) { min_y = k.position.y; }
-    });
-
-    const poseWidth = max_x - min_x;
-    const poseHeight = max_y - min_y;
-
-    poses[0].pose.keypoints.forEach(k => {
-      currentPose.push((k.position.x - min_x) / poseWidth);
-      currentPose.push((k.position.y - min_y) / poseHeight);
-    });
-
-    let closestMatchIndex = findMostSimilarMatch(currentPose);
-    if (closestMatchIndex) {
-      // WE HAVE A WINNER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      let closestMatch = images[closestMatchIndex];
-      console.log(closestMatch);
-      document.querySelector("#img").setAttribute("src", closestMatch);
-      document.querySelector("#titel").innerHTML = data[closestMatchIndex].titel ;
-      document.querySelector("#p_name").innerHTML = data[closestMatchIndex].p_name ;
-      document.querySelector("#p_surname").innerHTML = data[closestMatchIndex].p_surname ;
-      document.querySelector("#p_livespan").innerHTML = data[closestMatchIndex].p_livespan ;
-      document.querySelector("#date").innerHTML = data[closestMatchIndex].date ;
-    } else {
-      console.log('nothing found');
+    // how to calculate distance between vectors
+    function cosineDistanceMatching(poseVector1, poseVector2) {
+      let cosineSimilarity = similarity(poseVector1, poseVector2);
+      let distance = 2 * (1 - cosineSimilarity);
+      return Math.sqrt(distance);
     }
-  }
-}
 
-// A function to draw ellipses over the detected keypoints
-function drawKeypoints() {
-  // Loop through all the poses detected
-  for (let i = 0; i < poses.length; i += 1) {
-    // For each pose detected, loop through all the keypoints
-    const pose = poses[i].pose;
-    for (let j = 0; j < pose.keypoints.length; j += 1) {
-      // A keypoint is an object describing a body part (like rightArm or leftShoulder)
-      const keypoint = pose.keypoints[j];
-      // Only draw an ellipse is the pose probability is bigger than 0.2
-      if (keypoint.score > 0.2) {
-        fill(255, 0, 0);
-        noStroke();
-        ellipse(keypoint.position.x, keypoint.position.y, 10, 10);
+    async function setup() {
+      createCanvas(640, 480);
+      video = createCapture(VIDEO);
+      video.size(width, height);
+
+      // Create a new poseNet method with a single detection
+      poseNet = ml5.poseNet(video);
+      // This sets up an event that fills the global variable "poses"
+      // with an array every time new poses are detected
+      poseNet.on("pose", function(results) {
+        poses = results;
+      });
+      // Hide the video element, and just show the canvas
+      video.hide();
+
+      // an array with all the images’ pose data
+      const poseData = data
+      // remove images without poses
+      .filter(d => d.pose.length > 0)
+      // only keep the keypoints and remove rest
+      .map((d, i) => {
+        images[i] = d.image;
+        const keypoints = [];
+        // Not normalized version:
+        // d.pose[0].pose.keypoints.forEach(k => {
+        //   keypoints.push(k.position.x);
+        //   keypoints.push(k.position.y);
+        // });
+
+        // All images have different size so we need to normalize our pose space
+        let min_x = Number.MAX_VALUE;
+        let min_y = Number.MAX_VALUE;
+        let max_x = Number.MIN_VALUE;
+        let max_y = Number.MIN_VALUE;
+        d.pose[0].pose.keypoints.forEach(k => {
+          if (k.position.x > max_x) { max_x = k.position.x; }
+          if (k.position.y > max_y) { max_y = k.position.y; }
+          if (k.position.x < min_x) { min_x = k.position.x; }
+          if (k.position.y < min_y) { min_y = k.position.y; }
+          });
+
+        const poseWidth = max_x - min_x;
+        const poseHeight = max_y - min_y;
+
+        d.pose[0].pose.keypoints.forEach(k => {
+          keypoints.push((k.position.x - min_x) / poseWidth);
+          keypoints.push((k.position.y - min_y) / poseHeight);
+        });
+        return keypoints;
+      });
+
+      vptree = VPTreeFactory.build(poseData, cosineDistanceMatching);
+    }
+
+    // function to find most similar pose
+    function findMostSimilarMatch(userPose) {
+      // search the vptree for the image pose that is nearest (in cosine distance) to userPose
+      let nearestImage = vptree.search(userPose);
+      if (nearestImage.length === 0) {
+        return null;
+      }
+      // return index (in relation to poseData) of nearest match. 
+      return nearestImage[0].i; 
+    }
+
+    async function draw() {
+      if (video) {
+        image(video, 0, 0, width, height);
+      }
+
+      // We can call both functions to draw all keypoints and the skeletons
+      drawKeypoints();
+      drawSkeleton();
+
+      if (poses.length > 0) {
+        console.log('nothing found');
+        const currentPose = [];
+        // Not-normalized version
+        // poses[0].pose.keypoints.forEach(k => {
+        //   currentPose.push(k.position.x);
+        //   currentPose.push(k.position.y);
+        // });
+        // Normalized version (see above)
+        let min_x = Number.MAX_VALUE;
+        let min_y = Number.MAX_VALUE;
+        let max_x = Number.MIN_VALUE;
+        let max_y = Number.MIN_VALUE;
+        poses[0].pose.keypoints.forEach(k => {
+          if (k.position.x > max_x) { max_x = k.position.x; }
+          if (k.position.y > max_y) { max_y = k.position.y; }
+          if (k.position.x < min_x) { min_x = k.position.x; }
+          if (k.position.y < min_y) { min_y = k.position.y; }
+        });
+
+        const poseWidth = max_x - min_x;
+        const poseHeight = max_y - min_y;
+
+        poses[0].pose.keypoints.forEach(k => {
+          currentPose.push((k.position.x - min_x) / poseWidth);
+          currentPose.push((k.position.y - min_y) / poseHeight);
+        });
+
+        let closestMatchIndex = findMostSimilarMatch(currentPose);
+        if (closestMatchIndex) {
+          // WE HAVE A WINNER!!!
+          let closestMatch = images[closestMatchIndex];
+          console.log(closestMatch);
+          document.querySelector("#img").setAttribute("src", closestMatch);
+          document.querySelector("#titel").innerHTML = data[closestMatchIndex].titel ;
+          document.querySelector("#p_name").innerHTML = data[closestMatchIndex].p_name ;
+          document.querySelector("#p_surname").innerHTML = data[closestMatchIndex].p_surname ;
+          document.querySelector("#p_livespan").innerHTML = data[closestMatchIndex].p_livespan ;
+          document.querySelector("#date").innerHTML = data[closestMatchIndex].date ;
+        } else {
+          console.log('nothing found');
+        }
       }
     }
-  }
-}
 
-// A function to draw the skeletons
-function drawSkeleton() {
-  // Loop through all the skeletons detected
-  for (let i = 0; i < poses.length; i += 1) {
-    const skeleton = poses[i].skeleton;
-    // For every skeleton, loop through all body connections
-    for (let j = 0; j < skeleton.length; j += 1) {
-      const partA = skeleton[j][0];
-      const partB = skeleton[j][1];
-      stroke(255, 0, 0);
-      line(partA.position.x, partA.position.y, partB.position.x, partB.position.y);
+    // A function to draw ellipses over the detected keypoints
+    function drawKeypoints() {
+      // Loop through all the poses detected
+      for (let i = 0; i < poses.length; i += 1) {
+        // For each pose detected, loop through all the keypoints
+        const pose = poses[i].pose;
+        for (let j = 0; j < pose.keypoints.length; j += 1) {
+          // A keypoint is an object describing a body part (like rightArm or leftShoulder)
+          const keypoint = pose.keypoints[j];
+          // Only draw an ellipse is the pose probability is bigger than 0.2
+          if (keypoint.score > 0.2) {
+            fill(255, 0, 0);
+            noStroke();
+            ellipse(keypoint.position.x, keypoint.position.y, 10, 10);
+          }
+        }
+      }
     }
-    // Only for the first pose
-    if (i === 0) {
 
+    // A function to draw the skeletons
+    function drawSkeleton() {
+      // Loop through all the skeletons detected
+      for (let i = 0; i < poses.length; i += 1) {
+        const skeleton = poses[i].skeleton;
+        // For every skeleton, loop through all body connections
+        for (let j = 0; j < skeleton.length; j += 1) {
+          const partA = skeleton[j][0];
+          const partB = skeleton[j][1];
+          stroke(255, 0, 0);
+          line(partA.position.x, partA.position.y, partB.position.x, partB.position.y);
+        }
+        // Only for the first pose
+        if (i === 0) {
+        }
+      }
     }
-  }
-}
-
-</script>
-
+  </script>
 </body>
 </html>
